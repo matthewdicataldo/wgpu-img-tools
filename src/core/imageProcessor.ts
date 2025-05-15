@@ -1,6 +1,6 @@
 import { FallbackController } from './fallbackController';
-import type { WebGPURenderer } from '../renderers/webgpu/webgpuRenderer'; // Assuming this path
-import type { ImageSource, FilterOperation } from '../types';
+import { WebGPURenderer } from '../renderers/webgpu/webgpuRenderer'; // Corrected path
+import type { ImageSource, FilterOperation, ProcessedOutput } from '../types';
 
 export class ImageProcessor {
     private renderer: WebGPURenderer | null = null; // Or a generic Renderer type
@@ -31,8 +31,11 @@ export class ImageProcessor {
                     throw new Error('Failed to get GPU device');
                 }
                 console.log('WebGPU device initialized successfully.');
-                // TODO: Instantiate the specific renderer, e.g., WebGPURenderer
-                // this.renderer = new WebGPURenderer(this.device);
+                // Instantiate the WebGPURenderer
+                this.renderer = new WebGPURenderer(this.device);
+                // Note: The renderer still needs its own initialize(canvas) call
+                // if it's intended to render to a specific canvas. This would typically
+                // be handled by the application using the ImageProcessor.
             } catch (error) {
                 console.error('WebGPU Initialization Error:', error);
                 throw error;
@@ -68,35 +71,56 @@ export class ImageProcessor {
             throw new Error('Unsupported image source type');
         }
 
-        // TODO: The texture creation part will be handled by the specific renderer
-        // e.g., this.renderer.uploadImage(imageBitmap);
+        // If a renderer is available and expects image uploads this way
+        if (this.renderer && this.renderer.uploadImage) {
+            // The renderer needs to be initialized with a canvas first by the application
+            // for uploadImage to typically make sense in the current renderer design (sizing canvas, etc)
+            // This implies an application flow like:
+            // 1. processor.initialize()
+            // 2. processor.attachCanvasToRenderer(canvas) // New method or pattern
+            // 3. processor.loadImage()
+            // For now, we assume the renderer is ready if it exists.
+            // Awaiting this as uploadImage is async in WebGPURenderer
+            await this.renderer.uploadImage(imageBitmap);
+        } else {
+            console.warn('Renderer not available or uploadImage not supported during loadImage. Texture not uploaded to GPU yet.');
+        }
+
         console.log('Image loaded and ImageBitmap created:', imageBitmap);
-        return imageBitmap; // Or perhaps a custom internal representation
+        return imageBitmap;
     }
 
     public async applyFilter(
         imageBitmap: ImageBitmap,
         operations: FilterOperation | FilterOperation[]
-    ): Promise<ImageBitmap> { // Or ImageData/HTMLCanvasElement
+    ): Promise<ProcessedOutput> { // Return type changed to ProcessedOutput
         if (!this.renderer) {
-            throw new Error('Renderer not available. Initialize ImageProcessor first.');
+            throw new Error('Renderer not available. Initialize ImageProcessor and ensure renderer is initialized (e.g., with a canvas).');
         }
         if (!this.device) {
             throw new Error('WebGPU device not available.');
         }
 
-        // TODO: This is a simplified placeholder. Actual implementation will involve:
-        // 1. Ensuring texture is created from imageBitmap by the renderer
-        // 2. Setting up pipeline(s) for the filter(s)
-        // 3. Executing render pass(es)
-        // 4. Reading back the processed image data (if needed as ImageBitmap/ImageData)
+        // The renderer's process method might expect to render to an initialized canvas context.
+        // It also currently returns ImageBitmap as a placeholder.
+        // A full implementation for ProcessedOutput might involve texture readback.
+        const result = await this.renderer.process(imageBitmap, operations);
 
-        console.log('Applying filter(s):', operations, 'to image:', imageBitmap);
-        // const processedBitmap = await this.renderer.process(imageBitmap, operations);
-        // return processedBitmap;
+        // For now, we assume the result from renderer.process is what we want to return.
+        // If it needs to be ImageData, further conversion is needed here or in renderer.
+        return result;
+    }
 
-        // Placeholder return, actual processing will be done by the renderer
-        return imageBitmap;
+    /**
+     * Initializes the renderer with a canvas. This is necessary if the renderer
+     * will be drawing to a visible canvas or using a canvas context.
+     */
+    public async initializeRendererWithCanvas(canvas: HTMLCanvasElement): Promise<void> {
+        if (!this.renderer) {
+            throw new Error('ImageProcessor has not been initialized with a WebGPU device yet, or renderer not created.');
+        }
+        await this.renderer.initialize(canvas);
+        console.log('ImageProcessor's renderer has been initialized with a canvas.');
     }
 
     public getGPUDevice(): GPUDevice | null {
