@@ -1,0 +1,25 @@
+{
+    "entry": [
+        "src/index.ts",
+        "src/demo/main.ts",
+        "vite.config.lib.ts"
+    ],
+    "project": [
+        "src/**/*.ts",
+        "src/**/*.html"
+    ],
+    "ignore": [
+        "node_modules",
+        "dist",
+        "**/*.test.ts",
+        "**/*.spec.ts"
+    ],
+    "ignoreBinaries": [],
+    "ignoreDependencies": [],
+    "ignoreExportsUsedInFile": true,
+    "ignoreWorkspaces": [],
+    "includeEntryExports": true,
+    "typescript": {
+        "config": "tsconfig.json"
+    }
+}

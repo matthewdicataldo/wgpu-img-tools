@@ -230,7 +230,7 @@ The WebGPU Image Processor project aims to develop a high-performance, client-si
 │   │   └── favicon.ico
 │   ├── src/
 │   │   ├── main.ts           # Demo page main script, imports & uses the library
-│   │   ├── App.tsx           # (If using React for demo, or vanilla JS/HTML)
+│   │   ├── demo.html           # (If using React for demo, or vanilla JS/HTML)
 │   │   └── style.css
 │   ├── index.html
 │   └── vite.config.ts
