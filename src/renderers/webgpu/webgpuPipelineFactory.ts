@@ -19,6 +19,7 @@ export class WebGPUPipelineFactory {
         const shaderModule = this.device.createShaderModule({ code: shaderCode });
 
         const pipeline = this.device.createRenderPipeline({
+            label: filter.name,
             layout: 'auto', // Let WebGPU infer the bind group layout from shaders
             vertex: {
                 module: shaderModule,
