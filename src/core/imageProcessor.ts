@@ -21,11 +21,11 @@ import type { ImageSource, FilterOperation, ProcessedOutput } from '../types';
  */
 export class ImageProcessor {
     private renderer: WebGPURenderer | null = null; // Or a generic Renderer type
-    private fallbackController: FallbackController;
     private device: GPUDevice | null = null;
 
     constructor() {
-        this.fallbackController = new FallbackController();
+        // FallbackController and its initialization removed as it was unused.
+        // If fallback logic is implemented later, it should be re-added.
     }
 
     /**
@@ -197,7 +197,7 @@ export class ImageProcessor {
             throw new Error('ImageProcessor has not been initialized with a WebGPU device yet, or renderer not created.');
         }
         await this.renderer.initialize(canvas);
-        console.log('ImageProcessor's renderer has been initialized with a canvas.');
+        console.log("ImageProcessor's renderer has been initialized with a canvas.");
     }
 
     /**

@@ -1,5 +1,3 @@
-import type { TGPUBuffer, TGPUTexture, TGPUSampler, TGPUBindGroupLayout, TGPURenderPipeline } from 'typegpu';
-
 /**
  * TypeGPU schema definitions for grayscale filter resources.
  * 
@@ -31,44 +29,22 @@ export const grayscaleResources = {
      * The sampler used to sample the input texture.
      * Default sampler parameters are used (linear filtering).
      */
-    sampler: {
-        kind: 'sampler',
-        binding: 0,
-        // GPUSamplerDescriptor properties can be defined here if needed,
-        // otherwise, they can be provided when creating the actual sampler.
-        // magFilter: 'linear',
-        // minFilter: 'linear',
-    } as const satisfies TGPUSampler,
+    sampler: { sampler: 'filtering' }, // As per TypeGPU documentation for bindGroupLayout entries
 
     /**
      * The input texture containing the original image data.
      * Defined as a 2D texture with float sampling.
      */
     inputTexture: {
-        kind: 'texture',
-        binding: 1,
-        texture_2d: { sampleType: 'float' }, // Corresponds to texture_2d<f32>
-        // GPUSamplerDescriptor: { sampleType: 'float' } // for texture_2d<f32>
-        // GPUTextureViewDescriptor properties can be defined here or when creating the view.
-        // format: 'rgba8unorm', (This is usually on the texture itself, not the view for binding purposes)
-        // dimension: '2d',
-    } as const satisfies TGPUTexture,
+        texture: 'float',
+        viewDimension: '2d'
+    }, // As per TypeGPU documentation for bindGroupLayout texture entries
 } as const;
 
-/**
- * Bind group layout schema for the grayscale filter.
- * 
- * @remarks
- * This schema defines the layout of the bind group that will be created
- * to bind the sampler and input texture to the grayscale shader.
- * 
- * The schema is derived from the grayscaleResources schema and ensures
- * type safety when creating the actual GPUBindGroupLayout.
- */
-export const grayscaleBindGroupLayout: TGPUBindGroupLayout<typeof grayscaleResources> = {
-    kind: 'bindGroupLayout',
-    entries: grayscaleResources,
-} as const;
+// The grayscaleResources object itself serves as the bind group layout definition
+// for TypeGPU's `createBindGroup` or `tgpu.bindGroupLayout()`.
+// An explicit `grayscaleBindGroupLayout` constant with `kind: 'bindGroupLayout'`
+// is not typically how layouts are defined before being processed by TypeGPU.
 
 // Example of how a render pipeline schema might look, incorporating the bind group layout.
 // This is a more advanced use and might be simplified or handled directly in pipeline factory for now.

@@ -7,7 +7,7 @@ import dts from 'vite-plugin-dts';
 export default defineConfig({
     build: {
         lib: {
-            entry: resolve(__dirname, 'src/main.ts'), // Main entry point of your library
+            entry: resolve(__dirname, 'src/index.ts'), // Main entry point of your library
             name: 'WgpuImgTools', // Global variable name when used in UMD/IIFE builds
             fileName: (format) => `wgpu-img-tools.${format}.js`, // Output file name
             formats: ['es', 'umd', 'iife'], // Output formats

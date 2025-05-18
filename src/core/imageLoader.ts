@@ -37,9 +37,10 @@ export async function loadImageData(source: ImageSource): Promise<CoreImageData>
             throw error;
         }
     } else {
-        // Exhaustive check for source type, helpful for TypeScript
-        const _exhaustiveCheck: never = source;
-        throw new Error('Unsupported image source type');
+        // TypeScript should ensure 'source' is never at this point if all types are handled.
+        // If 'source' could be something else, this throw handles it at runtime.
+        // const _exhaustiveCheck: never = source; // This was causing an unused variable error.
+        throw new Error(`Unsupported image source type: ${typeof source}`);
     }
 
     // 2. Convert ImageBitmap to CoreImageData (using offscreen canvas)

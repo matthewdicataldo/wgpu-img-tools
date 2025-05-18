@@ -1,8 +1,13 @@
 {
   "name": "wgpu-img-tools",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A WebGPU-accelerated image processing toolkit.",
+  "main": "dist/wgpu-img-tools.umd.js",
+  "module": "dist/wgpu-img-tools.es.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -12,7 +17,9 @@
     "lint": "eslint . --ext .ts,.html --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext .ts,.html --fix",
     "knip": "knip",
-    "dev": "pnpm exec vite --config vite.config.lib.ts --host"
+    "dev": "pnpm exec vite --config vite.config.lib.ts --host",
+    "build": "pnpm exec vite build --config vite.config.lib.ts",
+    "dev:demo": "pnpm exec vite --config vite.config.demo.ts --host"
   },
   "keywords": [],
   "author": "",
