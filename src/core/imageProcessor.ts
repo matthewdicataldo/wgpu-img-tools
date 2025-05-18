@@ -2,6 +2,23 @@ import { FallbackController } from './fallbackController';
 import { WebGPURenderer } from '../renderers/webgpu/webgpuRenderer'; // Corrected path
 import type { ImageSource, FilterOperation, ProcessedOutput } from '../types';
 
+/**
+ * Main class for processing images using WebGPU (with fallback options).
+ * 
+ * @remarks
+ * ImageProcessor manages the lifecycle of image processing operations,
+ * including initialization of the appropriate rendering backend,
+ * loading images from various sources, and applying filters.
+ * 
+ * @example
+ * ```typescript
+ * const processor = new ImageProcessor();
+ * await processor.initialize();
+ * await processor.initializeRendererWithCanvas(myCanvas);
+ * const image = await processor.loadImage('path/to/image.jpg');
+ * const result = await processor.applyFilter(image, { type: 'grayscale' });
+ * ```
+ */
 export class ImageProcessor {
     private renderer: WebGPURenderer | null = null; // Or a generic Renderer type
     private fallbackController: FallbackController;
@@ -11,6 +28,19 @@ export class ImageProcessor {
         this.fallbackController = new FallbackController();
     }
 
+    /**
+     * Initializes the image processor with the preferred rendering backend.
+     * 
+     * @param preferredBackend - The preferred rendering backend to use (defaults to 'webgpu')
+     * @returns A promise that resolves when initialization is complete
+     * @throws Error if the requested backend is not available or initialization fails
+     * 
+     * @example
+     * ```typescript
+     * const processor = new ImageProcessor();
+     * await processor.initialize('webgpu');
+     * ```
+     */
     public async initialize(preferredBackend: string = 'webgpu'): Promise<void> {
         // TODO: Implement backend selection logic via FallbackController
         // For now, directly attempt WebGPU initialization inspired by demo.html
@@ -44,6 +74,23 @@ export class ImageProcessor {
         // TODO: else if (preferredBackend === 'webgl') { ... }
     }
 
+    /**
+     * Loads an image from various source types and prepares it for processing.
+     * 
+     * @param source - The image source (File, HTMLImageElement, ImageBitmap, or URL string)
+     * @returns A promise that resolves to an ImageBitmap of the loaded image
+     * @throws Error if the image cannot be loaded or if the processor is not initialized
+     * 
+     * @example
+     * ```typescript
+     * // Load from URL
+     * const image1 = await processor.loadImage('https://example.com/image.jpg');
+     * 
+     * // Load from file input
+     * const fileInput = document.querySelector('input[type="file"]');
+     * const image2 = await processor.loadImage(fileInput.files[0]);
+     * ```
+     */
     public async loadImage(source: ImageSource): Promise<ImageBitmap> {
         if (!this.device) {
             throw new Error('ImageProcessor not initialized or WebGPU device not available.');
@@ -90,6 +137,26 @@ export class ImageProcessor {
         return imageBitmap;
     }
 
+    /**
+     * Applies one or more filter operations to the provided image.
+     * 
+     * @param imageBitmap - The image to process
+     * @param operations - A single filter operation or array of operations to apply
+     * @returns A promise that resolves to the processed output
+     * @throws Error if the renderer is not available or processing fails
+     * 
+     * @example
+     * ```typescript
+     * // Apply a single filter
+     * const result = await processor.applyFilter(image, { type: 'grayscale' });
+     * 
+     * // Apply multiple filters (when supported)
+     * const result = await processor.applyFilter(image, [
+     *   { type: 'grayscale' },
+     *   { type: 'blur', radius: 5 }
+     * ]);
+     * ```
+     */
     public async applyFilter(
         imageBitmap: ImageBitmap,
         operations: FilterOperation | FilterOperation[]
@@ -114,6 +181,16 @@ export class ImageProcessor {
     /**
      * Initializes the renderer with a canvas. This is necessary if the renderer
      * will be drawing to a visible canvas or using a canvas context.
+     * 
+     * @param canvas - The canvas element to initialize the renderer with
+     * @returns A promise that resolves when the renderer is initialized
+     * @throws Error if the processor or renderer is not initialized
+     * 
+     * @example
+     * ```typescript
+     * const canvas = document.getElementById('output-canvas') as HTMLCanvasElement;
+     * await processor.initializeRendererWithCanvas(canvas);
+     * ```
      */
     public async initializeRendererWithCanvas(canvas: HTMLCanvasElement): Promise<void> {
         if (!this.renderer) {
@@ -123,6 +200,11 @@ export class ImageProcessor {
         console.log('ImageProcessor's renderer has been initialized with a canvas.');
     }
 
+    /**
+     * Returns the current GPU device if available.
+     * 
+     * @returns The GPU device or null if not initialized
+     */
     public getGPUDevice(): GPUDevice | null {
         return this.device;
     }

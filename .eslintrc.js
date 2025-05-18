@@ -5,6 +5,7 @@ module.exports = {
         '@typescript-eslint',
         'import',
         'prettier',
+        'tsdoc',
     ],
     extends: [
         'eslint:recommended',
@@ -24,6 +25,7 @@ module.exports = {
                 alphabetize: { order: 'asc', caseInsensitive: true },
             },
         ],
+        "tsdoc/syntax": "warn",
         // Add any project-specific rules here
     },
     settings: {

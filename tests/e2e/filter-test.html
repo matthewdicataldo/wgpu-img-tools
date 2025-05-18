@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Processing E2E Test</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        canvas { border: 1px solid #ccc; background-color: white; margin-top: 10px; }
+        .container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>E2E Test Page for Image Processing</h1>
+        <p>This page is used by Playwright to test the image processing library.</p>
+        <canvas id="outputCanvas" width="512" height="512"></canvas>
+    </div>
+
+    <!--
+        The library will be imported here.
+        Playwright will interact with functions exposed by the library or test-specific functions.
+        Assuming the library is built into an ES module format.
+        The actual path might depend on the dev server configuration (e.g., '/dist/wgpu-img-tools.es.js' or '/src/main.ts')
+    -->
+    <script type="module">
+        // Vite serves files from /src directly and handles TS compilation.
+        // Adjust path based on your project structure and where applyFilters is exported from.
+        // Assuming applyFilters is exported from '../../src/core/filterProcessor.ts' relative to this HTML file's location in the source tree.
+        // Or, if you have a main entry point like '../../src/main.ts' that exports it:
+        import { applyFilters } from '../../src/core/filterProcessor.ts';
+        // Make sure CoreImageData and FilterOperation types are available if needed for type checking in this script,
+        // though for runtime they are just objects.
+
+        window.runApplyFiltersTest = async (inputCoreImageData, filterOperations) => {
+            const outputCanvas = document.getElementById('outputCanvas');
+            const ctx = outputCanvas.getContext('2d');
+            if (!ctx) {
+                console.error('Could not get 2D context');
+                return { success: false, error: 'Could not get 2D context' };
+            }
+
+            // Convert the plain array data back to Uint8ClampedArray for CoreImageData
+            // The inputCoreImageData from Playwright's evaluate will have data as number[]
+            const actualInputData = {
+                ...inputCoreImageData,
+                data: new Uint8ClampedArray(inputCoreImageData.data)
+            };
+
+            try {
+                if (!navigator.gpu) {
+                    return { success: false, error: 'WebGPU not available in this browser.' };
+                }
+                const adapter = await navigator.gpu.requestAdapter();
+                if (!adapter) {
+                    return { success: false, error: 'Failed to get GPU adapter.' };
+                }
+                const device = await adapter.requestDevice();
+                if (!device) {
+                    return { success: false, error: 'Failed to get GPU device.' };
+                }
+
+                console.log('Applying filters with input:', actualInputData, 'operations:', filterOperations);
+                const resultImageData = await applyFilters(actualInputData, filterOperations, device);
+                console.log('Filters applied, result:', resultImageData);
+
+                // Ensure canvas dimensions match result image data if necessary
+                outputCanvas.width = resultImageData.width;
+                outputCanvas.height = resultImageData.height;
+
+                // Create ImageData for canvas
+                const nativeImageData = new ImageData(resultImageData.data, resultImageData.width, resultImageData.height);
+                ctx.putImageData(nativeImageData, 0, 0);
+                console.log('Image data drawn to canvas');
+
+                return {
+                    success: true,
+                    width: resultImageData.width,
+                    height: resultImageData.height,
+                    // Optionally, can return a snippet of pixel data for more direct assertion
+                    // firstPixel: Array.from(resultImageData.data.slice(0, 4))
+                };
+            } catch (error) {
+                console.error('Error in runApplyFiltersTest:', error);
+                return { success: false, error: error.message || String(error) };
+            }
+        };
+        console.log('E2E test page loaded. runApplyFiltersTest is ready.');
+    </script>
+</body>
+</html> 

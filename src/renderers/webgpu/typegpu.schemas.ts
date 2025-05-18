@@ -1,11 +1,36 @@
 import type { TGPUBuffer, TGPUTexture, TGPUSampler, TGPUBindGroupLayout, TGPURenderPipeline } from 'typegpu';
 
-// Schema for the resources used by the grayscale filter shader.
-// This aligns with the bindings in grayscale.wgsl:
-// @group(0) @binding(0) var mySampler: sampler;
-// @group(0) @binding(1) var inputTexture: texture_2d<f32>;
+/**
+ * TypeGPU schema definitions for grayscale filter resources.
+ * 
+ * @remarks
+ * This module defines the TypeGPU schemas for the resources used by the grayscale filter.
+ * TypeGPU provides type-safe definitions for WebGPU resources, ensuring that the TypeScript
+ * code matches the WGSL shader expectations.
+ */
 
+/**
+ * Schema for the resources used by the grayscale filter shader.
+ * 
+ * @remarks
+ * This schema aligns with the bindings in grayscale.wgsl:
+ * ```wgsl
+ * @group(0) @binding(0) var mySampler: sampler;
+ * @group(0) @binding(1) var inputTexture: texture_2d<f32>;
+ * ```
+ * 
+ * The schema defines:
+ * - A sampler at binding 0
+ * - A 2D float texture at binding 1
+ * 
+ * These resources are used by the shader to sample the input image and
+ * convert it to grayscale.
+ */
 export const grayscaleResources = {
+    /**
+     * The sampler used to sample the input texture.
+     * Default sampler parameters are used (linear filtering).
+     */
     sampler: {
         kind: 'sampler',
         binding: 0,
@@ -14,6 +39,11 @@ export const grayscaleResources = {
         // magFilter: 'linear',
         // minFilter: 'linear',
     } as const satisfies TGPUSampler,
+
+    /**
+     * The input texture containing the original image data.
+     * Defined as a 2D texture with float sampling.
+     */
     inputTexture: {
         kind: 'texture',
         binding: 1,
@@ -25,7 +55,16 @@ export const grayscaleResources = {
     } as const satisfies TGPUTexture,
 } as const;
 
-// Define the bind group layout schema based on the resources
+/**
+ * Bind group layout schema for the grayscale filter.
+ * 
+ * @remarks
+ * This schema defines the layout of the bind group that will be created
+ * to bind the sampler and input texture to the grayscale shader.
+ * 
+ * The schema is derived from the grayscaleResources schema and ensures
+ * type safety when creating the actual GPUBindGroupLayout.
+ */
 export const grayscaleBindGroupLayout: TGPUBindGroupLayout<typeof grayscaleResources> = {
     kind: 'bindGroupLayout',
     entries: grayscaleResources,
