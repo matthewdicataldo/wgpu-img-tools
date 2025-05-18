@@ -16,6 +16,7 @@ const webgpuStatus = document.getElementById('webgpu-status') as HTMLDivElement;
 
 // --- Library Initialization ---
 async function initLibrary(): Promise<boolean> {
+    updateStatus("Initializing Library...", "info"); // Initial status
     try {
         processor = await initialize({ preferredBackend: 'webgpu' });
         updateStatus("Image Processing Library Initialized (WebGPU). Ready to load an image.", "success");
