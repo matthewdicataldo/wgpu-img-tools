@@ -9,22 +9,22 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            overscroll-behavior: none; /* Prevents pull-to-refresh on mobile */
+            overscroll-behavior: none; 
         }
-        /* Custom scrollbar for a more material feel - optional */
+        
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1e293b; /* slate-800 */
+            background: #1e293b; 
         }
         ::-webkit-scrollbar-thumb {
-            background: #6366f1; /* indigo-500 */
+            background: #6366f1; 
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #4f46e5; /* indigo-600 */
+            background: #4f46e5; 
         }
         .placeholder-bg {
             background-image: repeating-linear-gradient(
@@ -35,9 +35,9 @@
                 rgba(255, 255, 255, 0.08) 20px
             );
         }
-        /* Ensure canvas is not display: none initially, but placeholder text handles visibility */
+        
         #webgpuCanvas {
-            display: block; /* Or 'inline-block' depending on layout needs */
+            display: block; 
         }
     </style>
     <script>
@@ -62,17 +62,15 @@
         }
     </script>
 </head>
-<body class="bg-background-page text-on-surface min-h-screen flex flex-col items-center justify-center p-4 selection:bg-primary selection:text-white pt-16"> {/* Added pt-16 for top padding due to fixed status bar */}
+<body class="bg-background-page text-on-surface min-h-screen flex flex-col items-center justify-center p-4 selection:bg-primary selection:text-white pt-16">
 
-    <div id="webgpu-status" class="fixed top-0 left-0 w-full z-50 p-3 text-sm text-center font-medium transition-all duration-300 ease-in-out"></div> {/* Will be styled by JS */}
+    <div id="webgpu-status" class="fixed top-0 left-0 w-full z-50 p-3 text-sm text-center font-medium transition-all duration-300 ease-in-out"></div>
 
-    <div class="w-full max-w-3xl bg-surface shadow-2xl rounded-xl p-6 md:p-8 space-y-6">
+    <div class="w-full max-w-3xl bg-surface shadow-2xl rounded-2xl p-6 md:p-8 space-y-6">
         <header class="text-center">
             <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">WebGPU Image Processor</h1>
             <p class="text-slate-400 mt-2">Demo: Grayscale Filter</p>
         </header>
-
-        {/* Status div moved to top of body */}
 
         <section class="space-y-4">
             <div>
@@ -117,4 +115,3 @@
 
     <script type="module" src="/demo.ts"></script>
 </body>
-</html>
