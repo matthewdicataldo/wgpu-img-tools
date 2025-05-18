@@ -7,7 +7,7 @@ alwaysApply: true
 
 This document provides a detailed reference for interacting with Taskmaster, covering both the recommended MCP tools, suitable for integrations like Roo Code, and the corresponding `task-master` CLI commands, designed for direct user interaction or fallback.
 
-**Note:** For interacting with Taskmaster programmatically or via integrated tools, using the **MCP tools is strongly recommended** due to better performance, structured data, and error handling. The CLI commands serve as a user-friendly alternative and fallback. 
+**Note:** For interacting with Taskmaster programmatically or via integrated tools, using the **MCP tools is strongly recommended** due to better performance, structured data, and error handling. Utilize the taskmaster mcp with the mem0 memory mcp. The CLI commands serve as a user-friendly alternative and fallback. 
 
 **Important:** Several MCP tools involve AI processing... The AI-powered tools include `parse_prd`, `analyze_project_complexity`, `update_subtask`, `update_task`, `update`, `expand_all`, `expand_task`, and `add_task`.
 
@@ -99,7 +99,7 @@ This document provides a detailed reference for interacting with Taskmaster, cov
 
 ### 4. Get Next Task (`next_task`)
 
-*   **MCP Tool:** `next_task`
+*   **MCP Tool:** `next_task` (read from the memory mcp first for context)
 *   **CLI Command:** `task-master next [options]`
 *   **Description:** `Ask Taskmaster to show the next available task you can work on, based on status and completed dependencies.`
 *   **Key Parameters/Options:**
@@ -108,7 +108,7 @@ This document provides a detailed reference for interacting with Taskmaster, cov
 
 ### 5. Get Task Details (`get_task`)
 
-*   **MCP Tool:** `get_task`
+*   **MCP Tool:** `get_task` (read from the memory mcp first for context)
 *   **CLI Command:** `task-master show [id] [options]`
 *   **Description:** `Display detailed information for a specific Taskmaster task or subtask by its ID.`
 *   **Key Parameters/Options:**
@@ -120,9 +120,9 @@ This document provides a detailed reference for interacting with Taskmaster, cov
 
 ## Task Creation & Modification
 
-### 6. Add Task (`add_task`)
+### 6. Add Task (`add_task`) 
 
-*   **MCP Tool:** `add_task`
+*   **MCP Tool:** `add_task` (store context first with the memory mcp)
 *   **CLI Command:** `task-master add-task [options]`
 *   **Description:** `Add a new task to Taskmaster by describing it; AI will structure it.`
 *   **Key Parameters/Options:**
@@ -136,7 +136,7 @@ This document provides a detailed reference for interacting with Taskmaster, cov
 
 ### 7. Add Subtask (`add_subtask`)
 
-*   **MCP Tool:** `add_subtask`
+*   **MCP Tool:** `add_subtask` (store context first with the memory mcp)
 *   **CLI Command:** `task-master add-subtask [options]`
 *   **Description:** `Add a new subtask to a Taskmaster parent task, or convert an existing task into a subtask.`
 *   **Key Parameters/Options:**

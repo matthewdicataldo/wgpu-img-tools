@@ -61,6 +61,22 @@ export type FilterOperation = Filter; // Example: { name: 'grayscale'; options?:
  */
 export interface LibraryConfig {
     preferredBackend?: 'webgpu' | 'webgl' | 'wasm' | 'typescript';
+    /**
+     * Optional parameters to be passed to `navigator.gpu.requestAdapter()`.
+     * This allows for fine-grained control over adapter selection, such as
+     * requesting a high-performance or low-power GPU.
+     *
+     * @example
+     * ```typescript
+     * const config: LibraryConfig = {
+     *   preferredBackend: 'webgpu',
+     *   gpuRequestAdapterOptions: {
+     *     powerPreference: 'high-performance'
+     *   }
+     * };
+     * ```
+     */
+    gpuRequestAdapterOptions?: GPURequestAdapterOptions;
     // Add other global library configuration options here
 }
 

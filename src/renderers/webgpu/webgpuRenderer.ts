@@ -2,6 +2,7 @@ import type { FilterOperation } from '../../types'; // Assuming operations are d
 import type { Filter } from '../../filters/common/types';
 import { WebGPUPipelineFactory } from './webgpuPipelineFactory';
 import grayscaleShader from './shaders/grayscale.wgsl?raw'; // Vite specific way to import raw text
+import { WebGPUContextError, WebGPUInitializationError, WebGPUResourceError, UnsupportedFilterError } from '../../core/errors';
 
 export interface Renderer {
     // Common interface for all renderers (WebGPU, WebGL, etc.)
@@ -33,7 +34,8 @@ export class WebGPURenderer implements Renderer {
         this.canvasElement = canvas;
         this.context = this.canvasElement.getContext('webgpu');
         if (!this.context) {
-            throw new Error('Failed to get WebGPU context from canvas.');
+            console.error('WebGPU Error: Failed to get WebGPU rendering context from the canvas element. Ensure the browser supports WebGPU and it is enabled.');
+            throw new WebGPUContextError('Failed to get WebGPU context from canvas. Ensure the browser supports WebGPU and it is enabled.');
         }
 
         this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -53,7 +55,7 @@ export class WebGPURenderer implements Renderer {
 
     async uploadImage(imageBitmap: ImageBitmap): Promise<void> {
         if (!this.device || !this.canvasElement) {
-            throw new Error('WebGPU Renderer not initialized or canvas not set.');
+            throw new WebGPUInitializationError('WebGPU Renderer not initialized or canvas not set. Call initialize() first.');
         }
 
         // Ensure canvas is sized correctly before creating texture
@@ -87,7 +89,7 @@ export class WebGPURenderer implements Renderer {
 
     private async prepareForFilter(filter: Filter): Promise<void> {
         if (!this.device || !this.sampler || !this.sourceTexture || !this.presentationFormat) {
-            throw new Error('Renderer not ready or missing resources for preparing filter.');
+            throw new WebGPUResourceError('Renderer not ready or missing critical resources (device, sampler, sourceTexture, or presentationFormat) for preparing filter.');
         }
 
         let shaderCode = '';
@@ -96,7 +98,7 @@ export class WebGPURenderer implements Renderer {
         }
         // TODO: Add more shaders for other filters
         else {
-            throw new Error(`Unsupported filter: ${filter.name}`);
+            throw new UnsupportedFilterError(filter.name);
         }
 
         this.currentPipeline = this.pipelineFactory.createPipeline(filter, shaderCode, this.presentationFormat);
@@ -111,8 +113,11 @@ export class WebGPURenderer implements Renderer {
     }
 
     async process(imageBitmap: ImageBitmap, operations: FilterOperation | FilterOperation[]): Promise<ImageBitmap> {
-        if (!this.device || !this.context || !this.currentPipeline || !this.currentBindGroup || !this.canvasElement) {
-            throw new Error('WebGPU Renderer not ready to process. Ensure image is uploaded and filter prepared.');
+        if (!this.device || !this.context || !this.canvasElement) {
+            throw new WebGPUInitializationError('WebGPU Renderer core components (device, context, canvas) not ready for processing.');
+        }
+        if (!this.currentPipeline || !this.currentBindGroup) {
+            throw new WebGPUResourceError('WebGPU Renderer pipeline or bind group not prepared for processing. Ensure a filter has been prepared.');
         }
 
         // For simplicity, this example only handles a single FilterOperation that is a simple Filter.

@@ -10,11 +10,12 @@ export { ChainableImage } from './core/ChainableImage';
 // For now, a placeholder for the initialize function
 import { WgpuImageProcessorInstance, ImageProcessorInstance } from './core/ImageProcessorInstance';
 import { FallbackController } from './core/fallbackController';
-import type { PreferredBackend } from './core/fallbackController';
+// PreferredBackend is already exported from fallbackController.ts and re-exported below.
+// import type { PreferredBackend } from './core/fallbackController';
 // TODO: Unused import, commented out for now.
 // import { ChainableImage } from './core/ChainableImage';
 // TODO: Unused imports (CoreImageData, ImageSource), commented out for now. LibraryConfig is still used.
-import { /*CoreImageData, ImageSource,*/ LibraryConfig } from './types';
+import type { LibraryConfig } from './types'; // Use 'type' import
 // TODO: Unused import, commented out for now.
 // import { loadImageData } from './core/imageLoader'; // Assuming this will be used
 
@@ -41,60 +42,65 @@ export type {
  * Initializes the image processing library and returns an ImageProcessorInstance.
  *
  * @remarks
- * This is the main entry point for using the library. It sets up the necessary
- * configurations and returns an instance that can be used to load and process images.
+ * This is the main entry point for using the library. It detects available backends,
+ * selects the best one based on preference (defaulting to WebGPU if available),
+ * and initializes the appropriate processor instance.
+ * For the MVP, only the WebGPU backend is fully supported for initialization.
+ * If WebGPU is not available or fails to initialize, the promise will be rejected.
  *
  * @param {LibraryConfig} [config] - Optional configuration for the library.
+ *   This can include `preferredBackend` to suggest a backend and
+ *   `gpuRequestAdapterOptions` for WebGPU adapter configuration.
  * @returns {Promise<ImageProcessorInstance>} A promise that resolves to an
- * {@link ImageProcessorInstance}.
+ *   {@link ImageProcessorInstance} if successful, or rejects with an error.
  *
  * @example
  * ```typescript
- * import { initialize } from 'wgpu-img-tools';
+ * import { initialize, LibraryConfig } from 'wgpu-img-tools';
  *
- * async function main() {
- *   const processor = await initialize({ preferredBackend: 'webgpu' });
- *   // Now use processor to load images
+ * async function startApp() {
+ *   try {
+ *     const processor = await initialize({ preferredBackend: 'webgpu' });
+ *     console.log('Image processor initialized successfully!');
+ *     // Use processor to load and process images
+ *     const image = await processor.load('path/to/your/image.png');
+ *     // ...
+ *   } catch (error) {
+ *     console.error('Failed to initialize image processor:', error);
+ *   }
  * }
- * main();
+ * startApp();
  * ```
  */
 export async function initialize(config?: LibraryConfig): Promise<ImageProcessorInstance> {
-  console.log('Initializing WebGPU Image Processing Library with config:', config);
+  console.log('Initializing Image Processing Library with config:', config);
 
   const fallbackController = new FallbackController();
-  const preferredBackendOrder = config?.preferredBackend ? [config.preferredBackend] : undefined;
-  const bestBackend = fallbackController.getBestAvailableBackend(preferredBackendOrder as PreferredBackend[] | undefined);
+  // FallbackController constructor already calls detectAvailableBackends.
 
-  if (bestBackend === 'webgpu') {
-    if (!navigator.gpu) {
-      console.error('WebGPU is preferred/available but navigator.gpu is not present.');
-      return Promise.reject(new Error('WebGPU not supported by the browser.'));
-    }
-    try {
-      const adapter = await navigator.gpu.requestAdapter();
-      if (!adapter) {
-        console.error('Failed to get WebGPU adapter.');
-        return Promise.reject(new Error('Failed to get WebGPU adapter.'));
-      }
-      const device = await adapter.requestDevice();
-      if (!device) {
-        console.error('Failed to get WebGPU device.');
-        return Promise.reject(new Error('Failed to get WebGPU device.'));
-      }
-      console.log('WebGPU backend selected and device acquired.');
+  const targetBackend = fallbackController.getBestAvailableBackend(
+    config?.preferredBackend ? [config.preferredBackend] : undefined
+  );
+
+  if (targetBackend === 'webgpu') {
+    console.log('Attempting to initialize WebGPU backend...');
+    const gpuDevice = await fallbackController.getWebGPUContext(config?.gpuRequestAdapterOptions);
+
+    if (gpuDevice) {
+      console.log('WebGPU device acquired successfully.');
       // Pass the original config and the acquired device
-      return new WgpuImageProcessorInstance(config || {}, device);
-    } catch (error) {
-      console.error('Error initializing WebGPU backend:', error);
-      return Promise.reject(new Error(`WebGPU initialization failed: ${error instanceof Error ? error.message : String(error)}`));
+      return new WgpuImageProcessorInstance(config || {}, gpuDevice);
+    } else {
+      const message = 'WebGPU backend initialization failed: Could not acquire GPUDevice.';
+      console.error(message);
+      // Even if WebGPU was preferred, if it fails, for MVP we reject.
+      return Promise.reject(new Error(message + ` Preferred/Best available: ${targetBackend}. Full support for other backends is not yet implemented in MVP.`));
     }
   } else {
-    // For MVP, we only fully support WebGPU.
-    // If WebGPU is not chosen or fails, and it was the preference or best available,
-    // we reject. Other backends (webgl, wasm, typescript) are not implemented yet.
-    console.warn(`Selected backend is '${bestBackend || 'none'}'. Currently, only WebGPU is fully implemented for initialization.`);
-    return Promise.reject(new Error(`No suitable and implemented backend found. Best available: ${bestBackend || 'none'}.`));
+    // For MVP, if WebGPU is not the best available (or fails as handled above), we reject.
+    const message = `WebGPU is not the best available backend. Preferred/Best available: ${targetBackend || 'none'}.`;
+    console.warn(message + ' Full support for other backends is not yet implemented in MVP.');
+    return Promise.reject(new Error(message + ' Full support for other backends is not yet implemented in MVP.'));
   }
 }
 
