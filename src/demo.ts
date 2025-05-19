@@ -82,7 +82,8 @@ imageUpload.addEventListener('change', async (event) => {
         }
         
         processButton.disabled = false;
-        updateStatus("Image loaded. Ready to process.", "info");
+        updateStatus("Image loaded. Processing automatically...", "info"); // Changed status message
+        await applyGrayscaleAndRender(); // Auto-process
 
     } catch (err: any) {
         console.error("Error loading image with library:", err);
@@ -99,7 +100,7 @@ imageUpload.addEventListener('change', async (event) => {
 });
 
 // --- Processing Logic ---
-processButton.addEventListener('click', async () => {
+async function applyGrayscaleAndRender() {
     if (!chainableImage || !originalImageBitmap) {
         updateStatus("No image loaded or library not ready. Cannot process.", "warn");
         return;
@@ -134,6 +135,10 @@ processButton.addEventListener('click', async () => {
         console.error("Error processing image with library:", err);
         updateStatus(`Error during library processing: ${err.message}`, "error");
     }
+}
+
+processButton.addEventListener('click', async () => {
+    await applyGrayscaleAndRender();
 });
 
 // --- Utility Functions ---
