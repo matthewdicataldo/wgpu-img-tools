@@ -27,13 +27,17 @@
         "types": [
             "vitest/globals",
             "node",
-            "@webgpu/types"
+            "@webgpu/types",
+            "svelte",
+            "vite/client"
         ]
     },
     "include": [
         "src/**/*.ts",
+        "src/**/*.svelte",
         "tests/**/*.ts",
         "vite.config.lib.ts",
+        "vite.config.demo.ts", // Also include the demo vite config
         "playwright.config.ts"
     ],
     "exclude": [

@@ -52,14 +52,21 @@ export interface Filter {
  * const options: GrayscaleFilterOptions = {};
  * 
  * // A future extension might support custom weights
- * const options: GrayscaleFilterOptions = {
- *   weights: { r: 0.3, g: 0.6, b: 0.1 }
- * };
+ * // const options: GrayscaleFilterOptions = {
+ * //   weights: { r: 0.3, g: 0.6, b: 0.1 }
+ * // };
  * ```
  */
 export interface GrayscaleFilterOptions {
-    // Example: intensity?: number; // Range 0.0 to 1.0
+    /**
+     * The intensity of the grayscale effect.
+     * A value of 0.0 means the image remains in its original color.
+     * A value of 1.0 means the image is fully converted to grayscale.
+     * Values in between will produce a partially desaturated image.
+     * Defaults to 1.0 (full grayscale) if not specified.
+     */
+    strength?: number; // Value from 0.0 (no effect) to 1.0 (full grayscale)
     // Example: weights?: { r: number; g: number; b: number };
 }
 
-// Add other common filter-related types and interfaces here 
+// Add other common filter-related types and interfaces here

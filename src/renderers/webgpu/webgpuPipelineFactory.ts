@@ -65,9 +65,42 @@ export class WebGPUPipelineFactory {
 
         const shaderModule = this.device.createShaderModule({ code: shaderCode });
 
+        let pipelineLayout: GPUPipelineLayout | 'auto';
+
+        if (filter.name === 'grayscale') {
+            // Explicitly define the bind group layout for the grayscale filter
+            const grayscaleBindGroupLayout = this.device.createBindGroupLayout({
+                label: 'grayscale-bind-group-layout',
+                entries: [
+                    { // Sampler
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        sampler: { type: 'filtering' },
+                    },
+                    { // Input Texture
+                        binding: 1,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: { sampleType: 'float' },
+                    },
+                    { // Strength Uniform Buffer
+                        binding: 2,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        buffer: { type: 'uniform' },
+                    },
+                ],
+            });
+            pipelineLayout = this.device.createPipelineLayout({
+                label: 'grayscale-pipeline-layout',
+                bindGroupLayouts: [grayscaleBindGroupLayout],
+            });
+        } else {
+            // For other filters, continue using auto-layout or define other specific layouts
+            pipelineLayout = 'auto';
+        }
+
         const pipeline = this.device.createRenderPipeline({
             label: filter.name,
-            layout: 'auto', // Let WebGPU infer the bind group layout from shaders
+            layout: pipelineLayout,
             vertex: {
                 module: shaderModule,
                 entryPoint: 'vs_main',
@@ -87,4 +120,4 @@ export class WebGPUPipelineFactory {
     }
 
     // Add methods for creating compute pipelines if needed in the future
-} 
+}

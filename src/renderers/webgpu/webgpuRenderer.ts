@@ -1,5 +1,5 @@
 import type { FilterOperation } from '../../types'; // Assuming operations are defined in root types
-import type { Filter } from '../../filters/common/types';
+import type { Filter, GrayscaleFilterOptions } from '../../filters/common/types'; // Added GrayscaleFilterOptions
 import { WebGPUPipelineFactory } from './webgpuPipelineFactory';
 import grayscaleShader from './shaders/grayscale.wgsl?raw'; // Vite specific way to import raw text
 import { WebGPUContextError, WebGPUInitializationError, WebGPUResourceError, UnsupportedFilterError } from '../../core/errors';
@@ -10,6 +10,8 @@ export interface Renderer {
     uploadImage(imageBitmap: ImageBitmap): Promise<void>;
     process(imageBitmap: ImageBitmap, operations: FilterOperation | FilterOperation[]): Promise<ImageBitmap>; // Or ImageData
     destroy(): void;
+    // Allow specific renderers to have update methods
+    updateGrayscaleStrength?(newStrength: number): void;
 }
 
 export class WebGPURenderer implements Renderer {
@@ -24,6 +26,7 @@ export class WebGPURenderer implements Renderer {
     private currentPipeline: GPURenderPipeline | null = null;
     private currentBindGroup: GPUBindGroup | null = null;
     private canvasElement: HTMLCanvasElement | null = null;
+    private strengthBuffer: GPUBuffer | null = null; // For grayscale strength
 
     constructor(device: GPUDevice) {
         this.device = device;
@@ -58,8 +61,6 @@ export class WebGPURenderer implements Renderer {
             throw new WebGPUInitializationError('WebGPU Renderer not initialized or canvas not set. Call initialize() first.');
         }
 
-        // Ensure canvas is sized correctly before creating texture
-        // This might be better handled by the ImageProcessor or application logic
         this.canvasElement.width = imageBitmap.width;
         this.canvasElement.height = imageBitmap.height;
 
@@ -69,10 +70,10 @@ export class WebGPURenderer implements Renderer {
 
         this.sourceTexture = this.device.createTexture({
             size: [imageBitmap.width, imageBitmap.height, 1],
-            format: 'rgba8unorm',
+            format: 'rgba8unorm', // Standard format for images
             usage: GPUTextureUsage.TEXTURE_BINDING |
                 GPUTextureUsage.COPY_DST |
-                GPUTextureUsage.RENDER_ATTACHMENT, // If it can be a render target itself
+                GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
         this.device.queue.copyExternalImageToTexture(
@@ -81,60 +82,95 @@ export class WebGPURenderer implements Renderer {
             [imageBitmap.width, imageBitmap.height]
         );
         console.log('Image uploaded to WebGPU texture.');
-
-        // Prepare for rendering (e.g. a grayscale filter by default or first in chain)
-        // This is a simplification; pipeline and bind group should be managed per operation.
-        // await this.prepareForFilter({ name: 'grayscale' }); // Example filter
     }
 
     private async prepareForFilter(filter: Filter): Promise<void> {
         if (!this.device || !this.sampler || !this.sourceTexture || !this.presentationFormat) {
-            throw new WebGPUResourceError('Renderer not ready or missing critical resources (device, sampler, sourceTexture, or presentationFormat) for preparing filter.');
+            throw new WebGPUResourceError('Renderer not ready or missing critical resources for preparing filter.');
         }
 
         let shaderCode = '';
+        const bindGroupEntries: GPUBindGroupEntry[] = [
+            { binding: 0, resource: this.sampler },
+            { binding: 1, resource: this.sourceTexture.createView() },
+        ];
+
+        // Clean up existing strength buffer if the new filter is not grayscale or if it's being recreated
+        if (filter.name !== 'grayscale' && this.strengthBuffer) {
+            this.strengthBuffer.destroy();
+            this.strengthBuffer = null;
+        }
+
         if (filter.name === 'grayscale') {
             shaderCode = grayscaleShader;
-        }
-        // TODO: Add more shaders for other filters
-        else {
-            throw new UnsupportedFilterError(filter.name);
-        }
+            
+            if (this.strengthBuffer) { // If buffer exists from a previous grayscale op, destroy it before creating new
+                this.strengthBuffer.destroy();
+            }
+            this.strengthBuffer = this.device.createBuffer({
+                label: 'grayscale-strength-uniform-buffer',
+                size: 4, // One f32
+                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+            });
 
+            const options = filter.options as GrayscaleFilterOptions; // Cast to access strength
+            // Default to 1.0 if strength is not provided or not a number
+            const strengthValue = typeof options?.strength === 'number' ? options.strength : 1.0;
+            this.device.queue.writeBuffer(this.strengthBuffer, 0, new Float32Array([strengthValue]));
+
+            bindGroupEntries.push({ binding: 2, resource: { buffer: this.strengthBuffer } });
+        } else {
+            // This path is for filters other than grayscale.
+            // Ensure shaderCode is set for these other filters if they are to be supported.
+            // For now, any other filter type would need its shader code loaded here.
+            // Example: if (filter.name === 'sepia') { shaderCode = sepiaShader; }
+            // If no specific handling, it will likely fail when creating the pipeline if shaderCode is empty.
+            if (!shaderCode) { // If shaderCode wasn't set by a known filter type
+                 throw new UnsupportedFilterError(`Shader for filter '${filter.name}' is not available or filter not supported.`);
+            }
+        }
+        
         this.currentPipeline = this.pipelineFactory.createPipeline(filter, shaderCode, this.presentationFormat);
-
+        
         this.currentBindGroup = this.device.createBindGroup({
-            layout: this.currentPipeline.getBindGroupLayout(0),
-            entries: [
-                { binding: 0, resource: this.sampler },
-                { binding: 1, resource: this.sourceTexture.createView() },
-            ],
+            layout: this.currentPipeline.getBindGroupLayout(0), 
+            entries: bindGroupEntries,
         });
+    }
+    
+    public updateGrayscaleStrength(newStrength: number): void {
+        if (!this.device) {
+            console.warn('WebGPURenderer: Device not available. Cannot update strength.');
+            return;
+        }
+        if (!this.strengthBuffer) {
+            console.warn('WebGPURenderer: Strength buffer not initialized. Ensure grayscale filter is active.');
+            return;
+        }
+        if (this.currentPipeline?.label !== 'grayscale') {
+            console.warn('WebGPURenderer: updateGrayscaleStrength called, but current filter is not grayscale.');
+        }
+        
+        const strengthValue = Math.max(0, Math.min(1, newStrength)); 
+        this.device.queue.writeBuffer(this.strengthBuffer, 0, new Float32Array([strengthValue]));
     }
 
     async process(imageBitmap: ImageBitmap, operations: FilterOperation | FilterOperation[]): Promise<ImageBitmap> {
         if (!this.device || !this.context || !this.canvasElement) {
-            throw new WebGPUInitializationError('WebGPU Renderer core components (device, context, canvas) not ready for processing.');
+            throw new WebGPUInitializationError('WebGPU Renderer core components not ready for processing.');
         }
-        if (!this.currentPipeline || !this.currentBindGroup) {
-            throw new WebGPUResourceError('WebGPU Renderer pipeline or bind group not prepared for processing. Ensure a filter has been prepared.');
-        }
-
-        // For simplicity, this example only handles a single FilterOperation that is a simple Filter.
-        // A more robust implementation would iterate through operations, manage intermediate textures, etc.
+        
         const operationList = Array.isArray(operations) ? operations : [operations];
+        if (operationList.length === 0) {
+             console.warn('No operations provided to process.');
+             return imageBitmap;
+        }
 
-        if (operationList.length !== 1 || !operationList[0].name) {
-            // For now, only support a single, simple filter like grayscale defined by its name
-            console.warn('Current process implementation only supports a single filter operation like {name: \'grayscale\'}.');
-            // Fallback: prepare for grayscale if not already done
-            if (!this.currentPipeline || !this.currentBindGroup || this.currentPipeline.label !== 'grayscale') {
-                await this.prepareForFilter({ name: 'grayscale' });
-            }
-        } else {
-            // Assuming the first operation is the one we want to apply directly to the canvas
-            const filterToApply = operationList[0] as Filter;
-            await this.prepareForFilter(filterToApply);
+        const filterToApply = operationList[0] as Filter; 
+        await this.prepareForFilter(filterToApply); // This will set up pipeline and bind group
+
+        if (!this.currentPipeline || !this.currentBindGroup) { // Check after prepareForFilter
+            throw new WebGPUResourceError('WebGPU Renderer pipeline or bind group not prepared after prepareForFilter call.');
         }
 
         const commandEncoder = this.device.createCommandEncoder();
@@ -143,32 +179,33 @@ export class WebGPURenderer implements Renderer {
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
-                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+                clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 }, 
                 loadOp: 'clear',
                 storeOp: 'store',
             }],
         };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setPipeline(this.currentPipeline); // Assumes pipeline is ready for the current filter
-        passEncoder.setBindGroup(0, this.currentBindGroup); // Assumes bind group is ready
-        passEncoder.draw(6, 1, 0, 0);
+        passEncoder.setPipeline(this.currentPipeline);
+        passEncoder.setBindGroup(0, this.currentBindGroup);
+        passEncoder.draw(6, 1, 0, 0); 
         passEncoder.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
-        console.log('Filter applied and rendered to canvas.');
+        console.log(`Filter '${filterToApply.name}' applied and rendered to canvas.`);
 
-        // To return an ImageBitmap, we'd need to read back from the texture/canvas.
-        // This is a complex operation and might not always be desired if rendering to canvas is the goal.
-        // For now, returning the input as a placeholder.
-        // A full implementation would involve: device.queue.copyTextureToBuffer, then buffer.mapAsync, then creating ImageBitmap/ImageData.
         return imageBitmap;
     }
 
     destroy(): void {
         this.sourceTexture?.destroy();
         this.outputTexture?.destroy();
-        // Any other GPU resources should be destroyed here.
-        console.log('WebGPU Renderer resources destroyed.');
+        this.strengthBuffer?.destroy(); 
+        this.strengthBuffer = null;
+        this.sourceTexture = null;
+        this.outputTexture = null;
+        this.context = null; 
+        this.canvasElement = null; 
+        console.log('WebGPU Renderer resources destroyed and references cleared.');
     }
-} 
+}

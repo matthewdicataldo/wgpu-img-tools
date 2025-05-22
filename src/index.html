@@ -1,117 +1,39 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGPU Image Processing Demo</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGPU Image Processor Demo</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            overscroll-behavior: none; 
-        }
-        
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e293b; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #6366f1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #4f46e5; 
-        }
-        .placeholder-bg {
-            background-image: repeating-linear-gradient(
-                45deg,
-                rgba(255, 255, 255, 0.05),
-                rgba(255, 255, 255, 0.05) 10px,
-                rgba(255, 255, 255, 0.08) 10px,
-                rgba(255, 255, 255, 0.08) 20px
-            );
-        }
-        
-        #webgpuCanvas {
-            display: block; 
-        }
+      body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f0f2f5; /* Light gray background */
+      }
+      .container {
+        background-color: #ffffff; /* White background for content area */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+      }
+      .placeholder {
+        height: 300px; /* Adjust as needed */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.375rem; /* Tailwind's rounded-md */
+        background-color: #f9fafb; /* Tailwind's bg-gray-50 or similar */
+        color: #9ca3af; /* Tailwind's text-gray-400 or similar */
+        border: 2px dashed #d1d5db; /* Tailwind's border-gray-300 or similar */
+      }
+      /* Additional custom styles can be added here */
     </style>
-    <script>
-        // Tailwind config
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        'primary': {
-                            DEFAULT: '#6366f1', // indigo-500
-                            hover: '#4f46e5'  // indigo-600
-                        },
-                        'surface': '#1e293b', // slate-800 (Darker surface for main content area)
-                        'surface-container': '#334155', // slate-700 (Slightly lighter for containers like image previews)
-                        'on-surface': '#e2e8f0', // slate-200
-                        'outline-variant': '#475569', // slate-600
-                        'background-page': '#0f172a' // slate-900 (Overall page background)
-                    },
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-background-page text-on-surface min-h-screen flex flex-col items-center justify-center p-4 selection:bg-primary selection:text-white pt-16">
-
-    <div id="webgpu-status" class="fixed top-0 left-0 w-full z-50 p-3 text-sm text-center font-medium transition-all duration-300 ease-in-out"></div>
-
-    <div class="w-full max-w-3xl bg-surface shadow-2xl rounded-2xl p-6 md:p-8 space-y-6">
-        <header class="text-center">
-            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">WebGPU Image Processor</h1>
-            <p class="text-slate-400 mt-2">Demo: Grayscale Filter</p>
-        </header>
-
-        <section class="space-y-4">
-            <div>
-                <label for="imageUpload" class="block text-sm font-medium text-slate-300 mb-1">Upload Image:</label>
-                <input type="file" id="imageUpload" accept="image/*"
-                       class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4
-                              file:rounded-lg file:border-0 file:text-sm file:font-semibold
-                              file:bg-primary file:text-white hover:file:bg-primary-hover
-                              cursor-pointer border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary">
-            </div>
-
-            <button id="processButton" disabled
-                    class="w-full bg-primary hover:bg-primary-hover text-white font-semibold py-3 px-4 rounded-lg shadow-md
-                           transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-primary
-                           disabled:opacity-50 disabled:cursor-not-allowed">
-                Apply Grayscale Filter
-            </button>
-        </section>
-
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <div>
-                <h2 class="text-lg font-semibold mb-2 text-slate-300">Original Image:</h2>
-                <div class="aspect-square bg-surface-container rounded-lg overflow-hidden shadow flex items-center justify-center placeholder-bg">
-                    <img id="originalImage" src="#" alt="Original" class="max-w-full max-h-full object-contain hidden">
-                    <p id="originalPlaceholder" class="text-slate-500 p-4 text-center">No image loaded</p>
-                </div>
-            </div>
-            <div>
-                <h2 class="text-lg font-semibold mb-2 text-slate-300">Processed Image (WebGPU):</h2>
-                <div class="aspect-square bg-surface-container rounded-lg overflow-hidden shadow flex items-center justify-center placeholder-bg relative">
-                    <canvas id="webgpuCanvas" class="w-full h-full max-w-full max-h-full object-contain"></canvas>
-                    <p id="canvasPlaceholder" class="text-slate-500 text-center absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">Output will appear here</p>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <footer class="text-center mt-8 text-slate-500 text-sm">
-        <p>WebGPU is a new technology. Ensure your browser supports it and hardware acceleration is enabled.</p>
-        <p>&copy; 2025 AI Image Demo</p>
-    </footer>
-
-    <script type="module" src="/demo.ts"></script>
-</body>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
