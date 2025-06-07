@@ -2,7 +2,21 @@
   "permissions": {
     "allow": [
       "Bash(grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm install:*)",
+      "Bash(node demo-dod.js)",
+      "Bash(mkdir:*)",
+      "Bash(pnpm list:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(rm:*)",
+      "Bash(node:*)",
+      "Bash(npx tsx:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx:*)",
+      "Bash(./node_modules/.bin/tsc:*)"
     ],
     "deny": []
   }
