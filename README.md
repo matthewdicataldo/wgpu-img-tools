@@ -1,4 +1,4 @@
-# WebGPU Image Processing Library
+# WebGPU Image Processing Library (WIP!)
 
 This is a high-performance, client-side JavaScript/TypeScript library for common image manipulation tasks, leveraging the power of modern GPUs directly within the browser via the WebGPU API.
 
